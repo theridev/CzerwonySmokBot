@@ -44,10 +44,14 @@ Kod bota jest w całości dostępny online! Komentarze w kodzie pozwolą przegl�
 https://github.com/theridev/CzerwonySmokBot
 '''
 
-# Zaimportuj moduły: API Discorda i random używany do wybierania losowych rzeczy.
-import discord, random
+# Zaimportuj moduły: API Discorda i random używany do wybierania losowych rzeczy. Także requests dla pobrania wybranego zdjęcia.
+import discord, random, requests
 from discord.ext import commands
 from discord.ui import Modal
+from io import BytesIO
+
+# Pillow dla stópek :3
+from PIL import Image
 
 # Uprawnienia dla bota
 intents = discord.Intents.default()
@@ -132,7 +136,6 @@ async def dyskryminacja(ctx):
     embed=discord.Embed(title=" ", description="Wybierz rodzaj dyskryminacji!", color=0xff7800)
     embed.set_image(url="https://radio.bobola.church/wp-content/uploads/2023/07/maxresdefault1.jpg")
     await ctx.channel.send(embed=embed,view=Buttons())
-    # https://i.ytimg.com/vi/Oj9YZPmktLw/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAopPOil9ew2IZurN0eAelE87Sr6A
 
 # Wybierz losowe zdjęcie z danego kanału
 async def losowezdj(ctx, channel, co):
@@ -149,7 +152,7 @@ async def losowezdj(ctx, channel, co):
     # Pobierz wiadomości z kanału.
     try:
         messages = []
-        async for msg in channel.history():  # Brak limitu na wiadomości może być ogromnym problemem. YOLO.
+        async for msg in channel.history(limit=None):  # Brak limitu na wiadomości może być ogromnym problemem. YOLO.
             messages.append(msg)
     except discord.Forbidden: # Błąd 403 - Forbidden / Zabroniony. Forbidden to najgorszy album Black Sabbath, tyle wiem.
         embed=discord.Embed(color=0xe01b24)
@@ -215,7 +218,9 @@ class Questionnaire(Modal, title='Zgadywanka'):
             await interaction.response.send_message(embed=embed)
         else:
             # ups
-            await interaction.response.send_message(f"Źle! Ten użytkownik to nie {guessLowercase}")
+            embed = discord.Embed(color=0xe01b24)
+            embed.add_field(name=f"Źle! Ten użytkownik to nie {guessLowercase}", value=" ", inline=True)
+            await interaction.response.send_message(embed=embed)
 
 # Zgaduj!
 @bot.command()
@@ -234,6 +239,43 @@ async def zgaduj(ctx):
     embed.set_image(url=pfp)
     await ctx.send(embed=embed, view=zgadujGuziki(guess_user=guessUser, guess_user_display=guessUserDisplay))  # Send message to the channel
 
+@bot.command()
+async def stopy(ctx):
+    invoker = ctx.author
+    invokerPFPUrl = invoker.avatar.url
+
+    # Pobierz awatar użytkownika za pomocą requests
+    response = requests.get(invokerPFPUrl, headers={"User-Agent": "Mozilla/5.0"})
+    if response.status_code == 200:
+        invokerPFP = Image.open(BytesIO(response.content)).convert("RGBA")  # musi być RGBA!!!
+        stopy = Image.open("stopki.png").convert("RGBA")  # musi być RGBA!!!
+
+        # Żeby poprawnie funkcja działała oba zdjęcia powinny być w tym samym rozmiarze.
+        invokerResized = invokerPFP.resize((500, 500))
+        stopyResized = stopy.resize((500, 500))
+
+        # Puste zdjęcie
+        final_image = Image.new("RGBA", (500, 500))
+        final_image.paste(invokerResized, (0, 0))  # Pierwsze zdjęcie
+        final_image.paste(stopyResized, (0, 0), stopyResized)  # Nakładka!
+
+        # Przekonwertuj do RGB dla większej kompatybilności, nigdy nie wiadomo
+        final_image_rgb = final_image.convert("RGB")
+
+        # Save and send the image
+        with BytesIO() as image_binary:
+            final_image_rgb.save(image_binary, "PNG")
+            image_binary.seek(0)
+            final = discord.File(fp=image_binary, filename="image.png")
+            embed = discord.Embed(color=0x8ff0a4)
+            embed.add_field(name="Stópki!", value=" ", inline=True)
+            embed.set_image(url="attachment://image.png")
+            await ctx.send(file=final, embed=embed)
+    else:
+        embed = discord.Embed(color=0xe01b24)
+        embed.add_field(name="Błąd!", value="Nie udało się pobrać awataru użytkownika!", inline=True)
+        embed.set_footer(text="Oznacz użytkownika @theridev, żeby spojrzał na ten błąd.")
+        await ctx.send(embed=embed)
 
 
 # Token poniżej. Ze względów bezpieczeństwa jest on przechowywany w oddzielnym pliku, nie zapisywanym przez Git.
