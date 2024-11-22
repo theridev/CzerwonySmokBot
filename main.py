@@ -119,6 +119,7 @@ async def help(ctx):
     embed.add_field(name=r"%dyskryminacja", value="Doświadcz dyskryminacji!", inline=True)
     embed.add_field(name=r"%zgaduj", value="Zgadnij co to za członek serwera!", inline=True)
     embed.add_field(name=r"%stopy", value="Dodaj stópki do swojego profilowego! (Sponsorowane przez kult stópek)", inline=True)
+    embed.add_field(name=r"%lysejadro", value="Dodaj Łyse Jądro do swojego profilowego! (Sponsorowane przez kult Łysego Jądra)", inline=True)
     embed.add_field(name="Wkrótce więcej!", value=" ", inline=True)
     await ctx.send(embed=embed)
 
@@ -292,12 +293,12 @@ async def lysejadro(ctx):
 
         # Żeby poprawnie funkcja działała oba zdjęcia powinny być w tym samym rozmiarze.
         invokerResized = invokerPFP.resize((500, 500))
-        lysyResized = stopy.resize((500, 500))
+        lysyResized = lysy.resize((500, 500))
 
         # Puste zdjęcie
         final_image = Image.new("RGBA", (500, 500))
         final_image.paste(invokerResized, (0, 0))  # Pierwsze zdjęcie
-        final_image.paste(stopyResized, (0, 0), stopyResized)  # Nakładka!
+        final_image.paste(lysyResized, (0, 0), lysyResized)  # Nakładka!
 
         # Przekonwertuj do RGB dla większej kompatybilności, nigdy nie wiadomo
         final_image_rgb = final_image.convert("RGB")
