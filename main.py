@@ -48,6 +48,7 @@ https://github.com/theridev/CzerwonySmokBot
 import discord, random, requests
 from discord.ext import commands
 from discord.ui import Modal
+from keep_alive import keep_alive
 from io import BytesIO
 
 # Pillow dla stópek :3
@@ -117,6 +118,7 @@ async def help(ctx):
     embed.add_field(name=r"%help", value="Wyślij tą wiadomość.", inline=True)
     embed.add_field(name=r"%dyskryminacja", value="Doświadcz dyskryminacji!", inline=True)
     embed.add_field(name=r"%zgaduj", value="Zgadnij co to za członek serwera!", inline=True)
+    embed.add_field(name=r"%stopy", value="Dodaj stópki do swojego profilowego! (Sponsorowane przez kult stópek)", inline=True)
     embed.add_field(name="Wkrótce więcej!", value=" ", inline=True)
     await ctx.send(embed=embed)
 
@@ -277,6 +279,45 @@ async def stopy(ctx):
         embed.set_footer(text="Oznacz użytkownika @theridev, żeby spojrzał na ten błąd.")
         await ctx.send(embed=embed)
 
+@bot.command()
+async def lysejadro(ctx):
+    invoker = ctx.author
+    invokerPFPUrl = invoker.avatar.url
+
+    # Pobierz awatar użytkownika za pomocą requests
+    response = requests.get(invokerPFPUrl, headers={"User-Agent": "Mozilla/5.0"})
+    if response.status_code == 200:
+        invokerPFP = Image.open(BytesIO(response.content)).convert("RGBA")  # musi być RGBA!!!
+        lysy = Image.open("stopki.png").convert("RGBA")  # musi być RGBA!!!
+
+        # Żeby poprawnie funkcja działała oba zdjęcia powinny być w tym samym rozmiarze.
+        invokerResized = invokerPFP.resize((500, 500))
+        lysyResized = stopy.resize((500, 500))
+
+        # Puste zdjęcie
+        final_image = Image.new("RGBA", (500, 500))
+        final_image.paste(invokerResized, (0, 0))  # Pierwsze zdjęcie
+        final_image.paste(stopyResized, (0, 0), stopyResized)  # Nakładka!
+
+        # Przekonwertuj do RGB dla większej kompatybilności, nigdy nie wiadomo
+        final_image_rgb = final_image.convert("RGB")
+
+        # Save and send the image
+        with BytesIO() as image_binary:
+            final_image_rgb.save(image_binary, "PNG")
+            image_binary.seek(0)
+            final = discord.File(fp=image_binary, filename="lysy.png")
+            embed = discord.Embed(color=0x8ff0a4)
+            embed.add_field(name="ŁYSYYYYY!", value=" ", inline=True)
+            embed.set_image(url="attachment://lysy.png")
+            await ctx.send(file=final, embed=embed)
+    else:
+        embed = discord.Embed(color=0xe01b24)
+        embed.add_field(name="Błąd!", value="Nie udało się pobrać awataru użytkownika!", inline=True)
+        embed.set_footer(text="Oznacz użytkownika @theridev, żeby spojrzał na ten błąd.")
+        await ctx.send(embed=embed)
+
+keep_alive()
 
 # Token poniżej. Ze względów bezpieczeństwa jest on przechowywany w oddzielnym pliku, nie zapisywanym przez Git.
 with open(".token", "r") as token_file:
