@@ -24,6 +24,8 @@
                     ███ █████░░░▒░░░▒░▒░░░▒░░▒█████ ███                    
                      █   ██████░░░░░░░░░░░░░███████  █                     
                           ██  ██  █░░░░░█  ██  ██                          
+<< Czerwony Smok >>
+main.py
 
 Hejka, to ja Theri!
 Opowiem wam historię.
@@ -48,8 +50,8 @@ https://github.com/theridev/CzerwonySmokBot
 import discord, random, requests
 from discord.ext import commands
 from discord.ui import Modal
-from keep_alive import keep_alive
 from io import BytesIO
+import stats.stats
 
 # Pillow dla stópek :3
 from PIL import Image
@@ -119,7 +121,10 @@ async def help(ctx):
     embed.add_field(name=r"%dyskryminacja", value="Doświadcz dyskryminacji!", inline=True)
     embed.add_field(name=r"%zgaduj", value="Zgadnij co to za członek serwera!", inline=True)
     embed.add_field(name=r"%stopy", value="Dodaj stópki do swojego profilowego! (Sponsorowane przez kult stópek)", inline=True)
-    embed.add_field(name=r"%lysejadro", value="Dodaj Łyse Jądro do swojego profilowego! (Sponsorowane przez kult Łysego Jądra)", inline=True)
+    embed.add_field(name=r"%lysejadro", value="Dodaj łysego do swojego profilowego! (Sponsorowane przez kult Łysego Jądra)", inline=True)
+    embed.add_field(name=r"%rank", value="Sprawdź ile razy zgadłeś.", inline=True)
+    embed.add_field(name=r"%top", value="Sprawdź kto zgadł najwięcej razy!", inline=True)
+    embed.add_field(name=r"%lysy", value="Wyślij łysego! (Sponsorowane przez kult Łysego Jądra)", inline=True)
     embed.add_field(name="Wkrótce więcej!", value=" ", inline=True)
     await ctx.send(embed=embed)
 
@@ -132,6 +137,11 @@ async def mem(ctx):
 @bot.command()
 async def cytat(ctx):
     await losowezdj(ctx, 1295872408636358726, "Cytat")
+
+# Lysy: Losowe zdjęcie jondra
+@bot.command()
+async def lysy(ctx):
+    await losowezdj(ctx, 1302417266960236606, "Łysy")
 
 # Zostań zdyskryminowany. Zdjęcie losowe. Na pomysł komendy wpadł Seth. Nie obwiniajcie mnie!
 @bot.command()
@@ -215,9 +225,10 @@ class Questionnaire(Modal, title='Zgadywanka'):
 
         # Sprawdź czy użytkownik trafił albo na poprawną nazwę wyświetleniową albo na poprawną nazwę użytkownika.
         # Np: i "theri" i "theridev" zadziała.
-        if guessLowercase == self.guess_user.lower() or guessLowercase == guessUserDisplayLowercase:
+        if guessLowercase == self.guess_user.lower() or guessLowercase == guessUserDisplayLowercase or guessLowercase == "kastracja" and self.guess_user.lower() == "postal_dude_jr."or guessLowercase == "dyskryminacja" and self.guess_user.lower() == "dmnk_dsc":
             embed = discord.Embed(color=0x8ff0a4)
             embed.add_field(name="Zgadłeś! Użytkownik to %s" % self.guess_user, value=" ", inline=True)
+            stats.stats.add(interaction.user.name, 1)
             await interaction.response.send_message(embed=embed)
         else:
             # ups
@@ -265,7 +276,7 @@ async def stopy(ctx):
         # Przekonwertuj do RGB dla większej kompatybilności, nigdy nie wiadomo
         final_image_rgb = final_image.convert("RGB")
 
-        # Save and send the image
+        # Save and send the json_object[user] + value image
         with BytesIO() as image_binary:
             final_image_rgb.save(image_binary, "PNG")
             image_binary.seek(0)
@@ -289,7 +300,7 @@ async def lysejadro(ctx):
     response = requests.get(invokerPFPUrl, headers={"User-Agent": "Mozilla/5.0"})
     if response.status_code == 200:
         invokerPFP = Image.open(BytesIO(response.content)).convert("RGBA")  # musi być RGBA!!!
-        lysy = Image.open("stopki.png").convert("RGBA")  # musi być RGBA!!!
+        lysy = Image.open("lysy.png").convert("RGBA")  # musi być RGBA!!!
 
         # Żeby poprawnie funkcja działała oba zdjęcia powinny być w tym samym rozmiarze.
         invokerResized = invokerPFP.resize((500, 500))
@@ -318,7 +329,46 @@ async def lysejadro(ctx):
         embed.set_footer(text="Oznacz użytkownika @theridev, żeby spojrzał na ten błąd.")
         await ctx.send(embed=embed)
 
-keep_alive()
+@bot.command()
+async def rank(ctx):
+    invoker = ctx.author
+    invokerName = ctx.author.name
+
+    randomColor = random.randrange(0, 2**24)
+    randomHex = hex(randomColor)
+    randomHexINT = int(randomHex,16)
+
+    value = stats.stats.getUserValue(invokerName)
+
+    if value == 1:
+        raz = "raz"
+    else:
+        raz = "razy"
+
+    embed = discord.Embed(color=randomHexINT)
+    embed.add_field(name="Użytkownik %s zgadł %s %s!" % (invokerName, str(value), raz), value=" ", inline=True)
+    embed.set_image(url=ctx.author.avatar.url)  # Awatar Jupii
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def top(ctx):
+    topValues = stats.stats.getAllValues()
+    top = {k: v for k, v in sorted(topValues.items(), key=lambda item: item[1], reverse=True)}
+
+    randomColor = random.randrange(0, 2**24)
+    randomHex = hex(randomColor)
+    randomHexINT = int(randomHex,16)
+
+    embed = discord.Embed(color=randomHexINT)
+    for x, (user, value) in enumerate(top.items(), start=1):
+        if value == 1:
+            raz = "raz"
+        else:
+            raz = "razy"
+        embed.add_field(name=f"{x}. {user}", value=f"Zgadnął {value} {raz}.")
+    
+    await ctx.send(embed=embed)
+
 
 # Token poniżej. Ze względów bezpieczeństwa jest on przechowywany w oddzielnym pliku, nie zapisywanym przez Git.
 with open(".token", "r") as token_file:
